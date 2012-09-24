@@ -63,14 +63,22 @@ tools_user_setup()
   eval_target="${2}"
   name="rvm_${eval_target}_path"
 
+  # ensure config file exists with the right permissions
+  if [[ ! -f "${target}/.rvmrc" ]]
+  then
+      touch "${target}/.rvmrc"
+      chgrp rvm "${target}/.rvmrc"
+  fi
+
   # detect name in config
-  if [[ -f "${target}/.rvmrc" ]] && GREP_OPTIONS="" \grep "^export ${name}=" "${target}/.rvmrc" > /dev/null
+  if GREP_OPTIONS="" \grep "^export ${name}=" "${target}/.rvmrc" > /dev/null
   then
     # if defined read path
     _user_path="$( GREP_OPTIONS="" \grep "^export ${name}=" "${target}/.rvmrc" | sed "s/^export ${name}=//" )"
   else
     # if not defined - define it
-    _user_path="\${HOME}/.rvm/${eval_target}"
+    _create_user_rvm_directory="\${HOME}/.rvm"
+    _user_path="${_create_user_rvm_directory}/${eval_target}"
     echo "export ${name}=\"${_user_path}\"" >> "${target}/.rvmrc"
   fi
 
@@ -80,6 +88,13 @@ tools_user_setup()
     HOME="${target}"
     # resolve the stored path
     eval "_user_path=\"${_user_path}\""
+
+    if [[ -n "${_create_user_rvm_directory}" ]] && [[ ! -d "${_create_user_rvm_directory}" ]]
+    then
+        mkdir -p "${_create_user_rvm_directory}"
+        chgrp rvm "${_create_user_rvm_directory}"
+        chmod g+s "${_create_user_rvm_directory}"
+    fi
 
     # ensure the defined path exists
     [[ -d "${_user_path}" ]] || mkdir -p "${_user_path}"
